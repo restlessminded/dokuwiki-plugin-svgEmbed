@@ -46,7 +46,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
     public function connectTo($mode)
     {
         // match everything the media component does, but short circuit into my code first
-        $this->Lexer->addSpecialPattern("\{\{(?:[^\}]|(?:\}[^\}]))+\}\}", $mode, 'plugin_svgembed');
+        $this->Lexer->addSpecialPattern("\{\{(?:[^\}\>\<]|(?:\}[^\>\<\}]))+\}\}", $mode, 'plugin_svgembed');
     }
 
     /**
