@@ -86,12 +86,90 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
      */
     public function render($mode, Doku_Renderer $renderer, $data)
     {
+        global $conf;
+
         // If no data or we're not rendering XHTML, exit without handling
         if (!$data || $mode != 'xhtml')
             return false;
 
+
+        // Determine the maximum width allowed
+        if (isset($data['width'])) {
+            // Single width value specified?  Render with this width, but determine the file height and scale accordingly
+            $svg_max = $data['width'];
+        }
+        else {
+            // If a value is set, use that, else load the default value
+            $svg_max = isset($conf['plugin']['svgembed']['max_svg_width']) ?
+                         $conf['plugin']['svgembed']['max_svg_width'] :
+                         $this->getConf('max_svg_width');
+        }
+
+
         // From here, it's basically a copy of the default renderer, but it inserts SVG with an embed tag rather than img tag.
-        $ret = '<embed src="' . ml($data['src'], array('w' => $data['width'], 'h' => $data['height'], 'cache' => $data['cache'],
+        $ret = '';
+        $hasdimensions = (isset($data['width']) && isset($data['height']));
+
+        // If both dimensions are not specified by the page then find them in the SVG file (if possible), and if not just pop out a default
+        if (!$hasdimensions) {
+            $svg_file = sprintf('%s%s', $conf['mediadir'], str_replace(':', '/', $data['src']));
+
+            if (file_exists($svg_file) && ($svg_fp = fopen($svg_file, 'r'))) {
+                $svg_xml = simplexml_load_file($svg_file);
+                $svg_width = round(floatval($svg_xml->attributes()->width));
+                $svg_height = round(floatval($svg_xml->attributes()->height));
+
+                if ($svg_width < 1 || $svg_height < 1) {
+                    if (isset($svg_xml->attributes()->viewBox)) {
+                        $svg_viewbox = preg_split('/[ ,]{1,}/', $svg_xml->attributes()->viewBox);
+                        $svg_width = round(floatval($svg_viewbox[2]));
+                        $svg_height = round(floatval($svg_viewbox[3]));
+                    }
+                }
+
+                if ($svg_width < 1 || $svg_height < 1) {
+                    $svg_width = isset($conf['plugin']['svgembed']['default_width']) ?
+                                   $conf['plugin']['svgembed']['default_width'] :
+                                   $this->getConf('default_width');;
+                    $svg_height = isset($conf['plugin']['svgembed']['default_height']) ?
+                                    $conf['plugin']['svgembed']['default_height'] :
+                                    $this->getConf('default_height');;
+                }
+
+                unset($svg_viewbox, $svg_xml);
+                fclose($svg_fp);
+            }
+
+            // Make sure we're not exceeding the maximum width; if so, let's scale the SVG value to the maximum size
+            if ($svg_width > $svg_max) {
+                $svg_height = round($svg_height * $svg_max / $svg_width);
+                $svg_width = $svg_max;
+            }
+
+
+            $data['width'] = $svg_width;
+            $data['height'] = $svg_height;
+        }
+        else {
+            $svg_width = $data['width'];
+            $svg_height = $data['height'];
+        }
+
+        switch($data['align']) {
+            case 'center':
+                $styleextra = "margin:auto";
+                break;
+            case 'left':
+            case 'right':
+                $styleextra = "float:" . urlencode($data['align']);
+                break;
+            default:
+                $styleextra = '';
+        }
+
+        $ret .= sprintf('<span style="display:block;width:%dpx;height:%dpx;%s">', $svg_width, $svg_height, $styleextra);
+
+        $ret .= '<embed type="image/svg+xml" src="' . ml($data['src'], array('w' => $data['width'], 'h' => $data['height'], 'cache' => $data['cache'],
                                                     'rev' => $renderer->_getLastMediaRevisionAt($data['src']))) . '"';
 
         $ret .= ' class="media' . $data['align'] . '"';
@@ -109,7 +187,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
         if (!is_null($data['height']))
             $ret .= ' height="' . $renderer->_xmlEntities($data['height']) . '"';
 
-        $ret .= ' />';
+        $ret .= ' /></span>';
 
         $renderer->doc .= $ret;
 
