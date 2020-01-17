@@ -164,25 +164,28 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 
             $ret .= sprintf('<span style="display:block;width:%dpx;height:%dpx;%s">', $svg_width, $svg_height, $styleextra);
 
-            $ret .= '<embed type="image/svg+xml" src="' . ml($data['src'], array('w' => $data['width'], 'h' => $data['height'], 'cache' => $data['cache'],
-                                                        'rev' => $renderer->_getLastMediaRevisionAt($data['src']))) . '"';
-
-            $ret .= ' class="media' . $data['align'] . '"';
+            $properties = '"' . ml($data['src'], array('w' => $data['width'], 'h' => $data['height'], 'cache' => $data['cache'],
+                                                        'rev' => $renderer->_getLastMediaRevisionAt($data['src']))) .
+                          '" class="media' . $data['align'] . '"';
 
             if ($data['title']) {
-                $ret .= ' title="' . $data['title'] . '"';
-                $ret .= ' alt="' . $data['title'] . '"';
+                $properties .= ' title="' . $data['title'] . '"';
+                $properties .= ' alt="' . $data['title'] . '"';
             } else {
-                $ret .= ' alt=""';
+                $properties .= ' alt=""';
             }
 
             if (!is_null($data['width']))
-                $ret .= ' width="' . $renderer->_xmlEntities($data['width']) . '"';
+                $properties .= ' width="' . $renderer->_xmlEntities($data['width']) . '"';
 
             if (!is_null($data['height']))
-                $ret .= ' height="' . $renderer->_xmlEntities($data['height']) . '"';
+                $properties .= ' height="' . $renderer->_xmlEntities($data['height']) . '"';
 
-            $ret .= ' /></span>';
+            $ret .= "<object type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
+
+            unset($properties);
+
+            $ret .= '</span>';
 
             $renderer->doc .= $ret;
         }
