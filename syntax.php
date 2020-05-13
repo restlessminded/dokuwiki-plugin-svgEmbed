@@ -13,6 +13,47 @@ if (!defined('DOKU_INC')) {
 
 class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 {
+
+    /**
+     * Figure out the pixel adjustment if an absolute measurement unit is given.
+     *
+     * @param string $value Dimension to analyze for unit value (cm|mm|Q|in|pc|pt|px)
+     */
+    private function Get_SVG_Unit_Adjustment($value) {
+        define('SVG_DPI', 96.0);
+
+        $matches = array();
+        $adjustment = 1;
+
+        if (preg_match('/(cm|mm|Q|in|pc|pt|px)/', $value, $matches) && count($matches)) {
+            switch ($matches[1]) {
+            // Don't bother checking for "px", we already set adjustment to 1, but we still
+            //   want to count it in the matches
+            case 'pt':
+                $adjustment = SVG_DPI / 72;
+                break;
+            case 'pc':
+                $adjustment = SVG_DPI / 6;
+                break;
+            case 'in':
+                $adjustment = SVG_DPI;
+                break;
+            case 'cm':
+                $adjustment = SVG_DPI / 2.54;
+                break;
+            case 'mm':
+                $adjustment = SVG_DPI / 25.4;
+                break;
+            case 'Q':
+                $adjustment = SVG_DPI / 101.6;
+                break;
+            }
+        }
+
+        return $adjustment;
+    }
+
+
     /**
      * @return string Syntax mode type
      */
@@ -84,7 +125,6 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
         if (!$data)
             return false;
 
-
         if ($mode == 'xhtml') {
             global $conf;
 
@@ -111,8 +151,14 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 
                 if (file_exists($svg_file) && ($svg_fp = fopen($svg_file, 'r'))) {
                     $svg_xml = simplexml_load_file($svg_file);
-                    $svg_width = round(floatval($svg_xml->attributes()->width));
-                    $svg_height = round(floatval($svg_xml->attributes()->height));
+
+                    // Find the amount to adjust the pixels for layout if a unit is involved; use the
+                    //   largest adjustment if they are mixed
+                    $svg_adjustment = max($this->Get_SVG_Unit_Adjustment($svg_xml->attributes()->width),
+                                          $this->Get_SVG_Unit_Adjustment($svg_xml->attributes()->height));
+
+                    $svg_width = round(floatval($svg_xml->attributes()->width) * $svg_adjustment);
+                    $svg_height = round(floatval($svg_xml->attributes()->height) * $svg_adjustment);
 
                     if ($svg_width < 1 || $svg_height < 1) {
                         if (isset($svg_xml->attributes()->viewBox)) {
@@ -140,7 +186,6 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     $svg_height = round($svg_height * $svg_max / $svg_width);
                     $svg_width = $svg_max;
                 }
-
 
                 $data['width'] = $svg_width;
                 $data['height'] = $svg_height;
