@@ -11,8 +11,52 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
+
 class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 {
+
+    /**
+     * Get the new parameters added to the syntax.
+     *
+     * @param string $match The text that matched the lexer pattern that we are inspecting
+     */
+    private function Get_New_Parameters($match, &$p) {
+        // Strip the opening and closing markup
+        $link = preg_replace(array('/^\{\{/', '/\}\}$/u'), '', $match);
+
+        // Split title from URL
+        $link = explode('|', $link, 2);
+
+        //remove aligning spaces
+        $link[0] = trim($link[0]);
+
+        //split into src and parameters (using the very last questionmark)
+        $pos = strrpos($link[0], '?');
+
+        if ($pos !== false) {
+            $param = substr($link[0], $pos + 1);
+
+            // Get units
+            $p['inResponsiveUnits'] = (preg_match('/units:(\%|vw)/i', $param, $local_match) > 0);
+            $p['responsiveUnits'] = ($p['inResponsiveUnits'] && count($local_match) > 1) ? $local_match[1] : NULL;
+
+            // Get declared CSS classes
+            unset($local_match);
+            $p['hasCssClasses'] = (preg_match_all('/class:(-?[_a-z]+[_a-z0-9-]*)/i', $param, $local_match) > 0);
+            $p['cssClasses'] = ($p['hasCssClasses'] && isset($local_match[1]) && count($local_match[1])) ? $local_match[1] : NULL;
+
+            // Re-parse width and height
+            $param = preg_replace('/class:(-?[_a-zA-Z]+[_a-zA-Z0-9-]*)/i', '', $param);   // Remove the classes since they can have numbers embedded
+            if(preg_match('/(\d+)(x(\d+))?/i', $param, $size)) {
+                $p['width'] = (!empty($size[1]) ? $size[1] : null);
+                $p['height'] = (!empty($size[3]) ? $size[3] : null);
+            } else {
+                $p['width'] = null;
+                $p['height'] = null;
+            }
+        }
+    }
+
 
     /**
      * Figure out the pixel adjustment if an absolute measurement unit is given.
@@ -99,8 +143,10 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
     public function handle($match, $state, $pos, Doku_Handler $handler) {
         $p = Doku_Handler_Parse_Media($match);
         $isSVG = preg_match('/\.svg$/i', trim($p['src']));
+        if ($isSVG)
+            $this->Get_New_Parameters($match, $p);
 
-        if ($p['type'] != 'internalmedia' || !$isSVG) {
+        if (!$isSVG || $p['type'] != 'internalmedia') {
             // If it's external media or not an SVG, perform the regular processing...
             $handler->media($match, $state, $pos);
             return false;
@@ -121,6 +167,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
      * @return bool If rendering was successful.
      */
     public function render($mode, Doku_Renderer $renderer, $data) {
+
         // If no data or we're not rendering XHTML, exit without handling
         if (!$data)
             return false;
@@ -139,7 +186,6 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                              $conf['plugin']['svgembed']['max_svg_width'] :
                              $this->getConf('max_svg_width');
             }
-
 
             // From here, it's basically a copy of the default renderer, but it inserts SVG with an embed tag rather than img tag.
             $ret = '';
@@ -171,10 +217,10 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     if ($svg_width < 1 || $svg_height < 1) {
                         $svg_width = isset($conf['plugin']['svgembed']['default_width']) ?
                                        $conf['plugin']['svgembed']['default_width'] :
-                                       $this->getConf('default_width');;
+                                       $this->getConf('default_width');
                         $svg_height = isset($conf['plugin']['svgembed']['default_height']) ?
                                         $conf['plugin']['svgembed']['default_height'] :
-                                        $this->getConf('default_height');;
+                                        $this->getConf('default_height');
                     }
 
                     unset($svg_viewbox, $svg_xml);
@@ -207,11 +253,27 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     $styleextra = '';
             }
 
-            $ret .= sprintf('<span style="display:block;width:%dpx;height:%dpx;%s">', $svg_width, $svg_height, $styleextra);
+            $ret .= '<span style="display:block;';
 
-            $properties = '"' . ml($data['src'], array('w' => $data['width'], 'h' => $data['height'], 'cache' => $data['cache'],
-                                                        'rev' => $renderer->_getLastMediaRevisionAt($data['src']))) .
-                          '" class="media' . $data['align'] . '"';
+            $spanunits = (isset($data['responsiveUnits'])) ? $data['responsiveUnits'] : 'px';
+
+            if (isset($data['width']))
+                $ret .= ";width:{$data['width']}{$spanunits}";
+
+            if (isset($data['height']))
+                $ret .= ";height:{$data['height']}{$spanunits}";
+
+            if (strlen($styleextra))
+                $ret .= ";{$styleextra}";
+
+            $ret .= '">';
+
+
+            $ml_array = array('cache' => $data['cache'], 'rev' => $renderer->_getLastMediaRevisionAt($data['src']));
+            if (!$data['inResponsiveUnits'])
+                $ml_array = array_merge($ml_array, array('w' => $data['width'], 'h' => $data['height']));
+
+            $properties = '"' . ml($data['src'], $ml_array) . '" class="media' . $data['align'] . '"';
 
             if ($data['title']) {
                 $properties .= ' title="' . $data['title'] . '"';
@@ -220,11 +282,25 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 $properties .= ' alt=""';
             }
 
-            if (!is_null($data['width']))
-                $properties .= ' width="' . $renderer->_xmlEntities($data['width']) . '"';
 
-            if (!is_null($data['height']))
-                $properties .= ' height="' . $renderer->_xmlEntities($data['height']) . '"';
+            if (!(is_null($data['width']) || is_null($data['height']))) {
+                $properties .= ' style="width:100%"';
+            }
+
+
+            // Add any extra specified classes to the objects
+            if ($data['hasCssClasses'] && count($data['cssClasses']) > 0) {
+                $additionalCssClasses = '';
+                foreach ($data['cssClasses'] as $newCssClass)
+                    $additionalCssClasses .= " " . $renderer->_xmlEntities($newCssClass);
+                $additionalCssClasses = trim($additionalCssClasses);
+
+                if (preg_match('/class="([^"]*)"/i', $properties, $pmatches)) {
+                    $properties = str_replace("class=\"{$pmatches[1]}\"", "class=\"{$pmatches[1]} {$additionalCssClasses}\"", $properties);
+                }
+
+                unset($additionalCssClasses, $newCssClass);
+            }
 
             $ret .= "<object type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
 
@@ -250,7 +326,6 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 $renderer->meta['relation']['media'][$src] = $exists;
             }
         }
-
 
         return true;
     }
