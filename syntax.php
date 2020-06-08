@@ -269,7 +269,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             $ret .= '">';
 
 
-            $ml_array = array('cache' => $data['cache'], 'rev' => $renderer->_getLastMediaRevisionAt($data['src']));
+            $ml_array = array('cache' => $data['cache']);
             if (!$data['inResponsiveUnits'])
                 $ml_array = array_merge($ml_array, array('w' => $data['width'], 'h' => $data['height']));
 
