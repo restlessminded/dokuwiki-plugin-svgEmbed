@@ -45,6 +45,14 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             $p['hasCssClasses'] = (preg_match_all('/class:(-?[_a-z]+[_a-z0-9-]*)/i', $param, $local_match) > 0);
             $p['cssClasses'] = ($p['hasCssClasses'] && isset($local_match[1]) && count($local_match[1])) ? $local_match[1] : NULL;
 
+            // Get printing
+            if (preg_match_all('/(^|&)(print|print:(on|true|yes|1|off|false|no|0))(&|$)/i', $param, $local_match)) {
+                $p['print'] = in_array(strtolower($local_match[2][0]), array('print', 'print:on', 'print:true', 'print:yes', 'print:1'));
+            }
+            else {
+                $p['print'] = ($this->getConf('default_print') == '1');
+            }
+
             // Re-parse width and height
             $param = preg_replace('/class:(-?[_a-zA-Z]+[_a-zA-Z0-9-]*)/i', '', $param);   // Remove the classes since they can have numbers embedded
             if(preg_match('/(\d+)(x(\d+))?/i', $param, $size)) {
@@ -253,7 +261,8 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     $styleextra = '';
             }
 
-            $ret .= '<span style="display:block;';
+            $svgembed_md5 = sprintf('svgembed_%s', md5(ml($data['src'], $ml_array)));
+            $ret .= '<span style="display:block';
 
             $spanunits = (isset($data['responsiveUnits'])) ? $data['responsiveUnits'] : 'px';
 
@@ -302,11 +311,19 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 unset($additionalCssClasses, $newCssClass);
             }
 
-            $ret .= "<object type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
+            $ret .= "<object id=\"" . $svgembed_md5 . "\" type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
 
             unset($properties);
 
+            $ret .= '<div class="svgprintbutton_table"><button type="submit" title="SVG" onClick="svgembed_printContent(\'' .
+                    urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' . $svgembed_md5 . '\'); return false" ' .
+                    'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false">Print SVG</button></div>';
+
+            // $ret .= '<a src="#" onClick="svgembed_printContent(\'' . $svgembed_md5 . '\'); return false">Print SVG</a>';
             $ret .= '</span>';
+
+            $ret .= '<br />';
+            // $ret .= '<button onClick="svgembed_printContent(\'' . $svgembed_md5 . '\'); return false">Print SVG</button>';
 
             $renderer->doc .= $ret;
         }
