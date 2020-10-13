@@ -322,11 +322,9 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                         '>Print SVG</button></div>';
             }
 
-            // $ret .= '<a src="#" onClick="svgembed_printContent(\'' . $svgembed_md5 . '\'); return false">Print SVG</a>';
             $ret .= '</span>';
 
             $ret .= '<br />';
-            // $ret .= '<button onClick="svgembed_printContent(\'' . $svgembed_md5 . '\'); return false">Print SVG</button>';
 
             $renderer->doc .= $ret;
         }
