@@ -316,7 +316,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             unset($properties);
 
             if ($data['print']) {
-                $ret .= '<div class="svgprintbutton_table"><button type="submit" title="SVG" onClick="svgembed_printContent(\'' .
+                $ret .= '<div class="svgprintbutton_table"><button type="submit" title="Print SVG" onClick="svgembed_printContent(\'' .
                         urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
                         $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
                         '>Print SVG</button></div>';
