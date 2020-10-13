@@ -1,7 +1,7 @@
 base   svgembed
 author Michael Bowers
 email  restlessmind@gmail.com
-date   2020-06-07
+date   2020-10-13
 name   svgEmbed plugin
 desc   Allows the use of the standard media syntax, but SVG files are placed with the <object> or <embed> tag, not the <img> tag.
 url    http://www.dokuwiki.org/plugin:svgembed
