@@ -315,9 +315,12 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 
             unset($properties);
 
-            $ret .= '<div class="svgprintbutton_table"><button type="submit" title="SVG" onClick="svgembed_printContent(\'' .
-                    urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' . $svgembed_md5 . '\'); return false" ' .
-                    'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false">Print SVG</button></div>';
+            if ($data['print']) {
+                $ret .= '<div class="svgprintbutton_table"><button type="submit" title="SVG" onClick="svgembed_printContent(\'' .
+                        urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
+                        $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
+                        '>Print SVG</button></div>';
+            }
 
             // $ret .= '<a src="#" onClick="svgembed_printContent(\'' . $svgembed_md5 . '\'); return false">Print SVG</a>';
             $ret .= '</span>';
