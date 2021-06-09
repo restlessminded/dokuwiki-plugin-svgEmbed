@@ -311,15 +311,20 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 unset($additionalCssClasses, $newCssClass);
             }
 
-            $ret .= "<object id=\"" . $svgembed_md5 . "\" type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
+            if (is_a($renderer, 'renderer_plugin_dw2pdf')) {
+                $ret .= "<img id=\"" . $svgembed_md5 . "\" src={$properties} />";
+            }
+            else {
+                $ret .= "<object id=\"" . $svgembed_md5 . "\" type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
 
-            unset($properties);
-
-            if ($data['print']) {
-                $ret .= '<div class="svgprintbutton_table"><button type="submit" title="Print SVG" onClick="svgembed_printContent(\'' .
-                        urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
-                        $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
-                        '>Print SVG</button></div>';
+                unset($properties);
+    
+                if ($data['print']) {
+                    $ret .= '<div class="svgprintbutton_table"><button type="submit" title="Print SVG" onClick="svgembed_printContent(\'' .
+                            urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
+                            $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
+                            '>Print SVG</button></div>';
+                }
             }
 
             $ret .= '</span>';
