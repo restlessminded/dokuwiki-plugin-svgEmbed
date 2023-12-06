@@ -3,7 +3,7 @@
  * Metadata for configuration manager plugin
  * Additions for the svgembed plugin
  *
- * @author  Emma Bowers <restlessmind@gmail.com>
+ * @author  Emma Bowers <emb@pobox.com>
  */
 
 $meta['max_svg_width']      = array('numeric', '_min' => 1);
