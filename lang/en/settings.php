@@ -2,7 +2,7 @@
 /**
  * English language file
  *
- * @author  Michael Bowers <restlessmind@gmail.com>
+ * @author  Emma Bowers <emb@pobox.com>
  */
 
 $lang['max_svg_width']      = 'Maximum width for SVG file size if no sizes are specified in the wiki page.';
