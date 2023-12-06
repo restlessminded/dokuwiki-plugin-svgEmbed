@@ -3,7 +3,7 @@
  * DokuWiki Plugin svgEmbed (Syntax Component)
  *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
- * @author  Michael Bowers <restlessmind@gmail.com>
+ * @author  Emma Bowers <emb@pobox.com>
  */
 
 // must be run within Dokuwiki
