@@ -2,7 +2,7 @@
 /**
  * Options for the svgembed plugin
  *
- * @author  Michael Bowers <restlessmind@gmail.com>
+ * @author  Emma Bowers <emb@pobox.com>
  */
 
 $conf['max_svg_width']      = 1024;         // Maximum width of an SVG file
