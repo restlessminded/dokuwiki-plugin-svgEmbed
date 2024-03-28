@@ -180,6 +180,15 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
         if (!$data)
             return false;
 
+        $src = $data['src'];
+        $isinternal = ($data['type'] == 'internalmedia' && !media_isexternal($src));
+        $exists = true;
+        if ($isinternal) {
+            global $ID;
+            list($src) = explode('#', $src, 2);
+            resolve_mediaid(getNS($ID), $src, $exists);
+        }
+
         if ($mode == 'xhtml') {
             global $conf;
 
@@ -201,7 +210,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 
             // If both dimensions are not specified by the page then find them in the SVG file (if possible), and if not just pop out a default
             if (!$hasdimensions) {
-                $svg_file = sprintf('%s%s', $conf['mediadir'], str_replace(':', '/', $data['src']));
+                $svg_file = sprintf('%s%s', $conf['mediadir'], str_replace(':', '/', $src));
 
                 if (file_exists($svg_file) && ($svg_fp = fopen($svg_file, 'r'))) {
                     $svg_xml = simplexml_load_file($svg_file);
@@ -261,7 +270,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     $styleextra = '';
             }
 
-            $svgembed_md5 = sprintf('svgembed_%s', md5(ml($data['src'], $ml_array)));
+            $svgembed_md5 = sprintf('svgembed_%s', md5(ml($src, $ml_array)));
             $ret .= '<span style="display:block';
 
             $spanunits = (isset($data['responsiveUnits'])) ? $data['responsiveUnits'] : 'px';
@@ -282,7 +291,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             if (!$data['inResponsiveUnits'])
                 $ml_array = array_merge($ml_array, array('w' => $data['width'], 'h' => $data['height']));
 
-            $properties = '"' . ml($data['src'], $ml_array) . '" class="media' . $data['align'] . '"';
+            $properties = '"' . ml($src, $ml_array) . '" class="media' . $data['align'] . '"';
 
             if ($data['title']) {
                 $properties .= ' title="' . $data['title'] . '"';
@@ -321,7 +330,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
     
                 if ($data['print']) {
                     $ret .= '<div class="svgprintbutton_table"><button type="submit" title="Print SVG" onClick="svgembed_printContent(\'' .
-                            urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
+                            urlencode(ml($src, $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
                             $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
                             '>Print SVG</button></div>';
                 }
@@ -334,20 +343,9 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             $renderer->doc .= $ret;
         }
 
-        if ($mode == 'metadata') {
+        if ($mode == 'metadata' && $isinternal) {
             // Add metadata so the SVG is associated to the page
-            if ($data['type'] == 'internalmedia') {
-                global $ID;
-
-                $src = $data['src'];
-                list($src) = explode('#', $src, 2);
-
-                if (media_isexternal($src))
-                    return;
-
-                resolve_mediaid(getNS($ID), $src, $exists);
-                $renderer->meta['relation']['media'][$src] = $exists;
-            }
+            $renderer->meta['relation']['media'][$src] = $exists;
         }
 
         return true;
