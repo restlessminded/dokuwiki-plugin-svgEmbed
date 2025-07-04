@@ -14,7 +14,6 @@ if (!defined('DOKU_INC')) {
 
 class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 {
-
     /**
      * Get the new parameters added to the syntax.
      *
@@ -117,7 +116,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
      * @return string Paragraph type
      */
     public function getPType() {
-        return 'block';
+        return 'normal';
     }
 
     /**
@@ -175,10 +174,18 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
      * @return bool If rendering was successful.
      */
     public function render($mode, Doku_Renderer $renderer, $data) {
-
         // If no data or we're not rendering XHTML, exit without handling
         if (!$data)
             return false;
+
+        $src = $data['src'];
+        $isInternal = ($data['type'] == 'internalmedia' && !media_isexternal($src));
+        $exists = true;
+        if ($isInternal) {
+            global $ID;
+            list($src) = explode('#', $src, 2);
+            resolve_mediaid(getNS($ID), $src, $exists);
+        }
 
         if ($mode == 'xhtml') {
             global $conf;
@@ -191,20 +198,20 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             else {
                 // If a value is set, use that, else load the default value
                 $svg_max = isset($conf['plugin']['svgembed']['max_svg_width']) ?
-                             $conf['plugin']['svgembed']['max_svg_width'] :
-                             $this->getConf('max_svg_width');
+                                    $conf['plugin']['svgembed']['max_svg_width'] :
+                                    $this->getConf('max_svg_width');
             }
 
             // From here, it's basically a copy of the default renderer, but it inserts SVG with an embed tag rather than img tag.
             $ret = '';
-            $hasdimensions = (isset($data['width']) && isset($data['height']));
+            $hasdimensions = (isset($data['width']) || isset($data['height']));
 
             // If both dimensions are not specified by the page then find them in the SVG file (if possible), and if not just pop out a default
             if (!$hasdimensions) {
-                $svg_file = sprintf('%s%s', $conf['mediadir'], str_replace(':', '/', $data['src']));
+                $svg_file = sprintf('%s%s', $conf['mediadir'], str_replace(':', '/', $src));
 
                 if (file_exists($svg_file) && ($svg_fp = fopen($svg_file, 'r'))) {
-                    $svg_xml = simplexml_load_file($svg_file);
+                    $svg_xml = simplexml_load_file($svg_file, SimpleXMLElement::class, XML_PARSE_HUGE);
 
                     // Find the amount to adjust the pixels for layout if a unit is involved; use the
                     //   largest adjustment if they are mixed
@@ -261,8 +268,8 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                     $styleextra = '';
             }
 
-            $svgembed_md5 = sprintf('svgembed_%s', md5(ml($data['src'], $ml_array)));
-            $ret .= '<span style="display:block';
+            $svgembed_md5 = sprintf('svgembed_%s', md5(ml($src, $ml_array)));
+            $ret .= '<span style="display:inline';
 
             $spanunits = (isset($data['responsiveUnits'])) ? $data['responsiveUnits'] : 'px';
 
@@ -282,7 +289,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             if (!$data['inResponsiveUnits'])
                 $ml_array = array_merge($ml_array, array('w' => $data['width'], 'h' => $data['height']));
 
-            $properties = '"' . ml($data['src'], $ml_array) . '" class="media' . $data['align'] . '"';
+            $properties = '"' . ml($src, $ml_array) . '" class="media' . $data['align'] . '"';
 
             if ($data['title']) {
                 $properties .= ' title="' . $data['title'] . '"';
@@ -291,10 +298,19 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 $properties .= ' alt=""';
             }
 
-
+/*
             if (!(is_null($data['width']) || is_null($data['height']))) {
                 $properties .= ' style="width:100%"';
             }
+            // Note:  07/04/2025 -- not sure what I was going for here, but this ain't it.
+*/
+
+            if (isset($data['width']))
+              $properties .= ' width="' . $data['width'] . $data['responsiveUnits'] . '"';
+
+            if (isset($data['height']))
+              $properties .= ' height="' . $data['width'] . $data['responsiveUnits'] . '"';
+
 
 
             // Add any extra specified classes to the objects
@@ -318,39 +334,25 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
                 $ret .= "<object id=\"" . $svgembed_md5 . "\" type=\"image/svg+xml\" data={$properties}><embed type=\"image/svg+xml\" src={$properties} /></object>";
 
                 unset($properties);
-    
+
                 if ($data['print']) {
                     $ret .= '<div class="svgprintbutton_table"><button type="submit" title="Print SVG" onClick="svgembed_printContent(\'' .
-                            urlencode(ml($data['src'], $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' .
-                            $svgembed_md5 . '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
+                            urlencode(ml($src, $ml_array)) . '\'); return false" onMouseOver="svgembed_onMouseOver(\'' . $svgembed_md5 .
+                            '\'); return false" ' . 'onMouseOut="svgembed_onMouseOut(\'' . $svgembed_md5 . '\'); return false"' .
                             '>Print SVG</button></div>';
                 }
             }
 
             $ret .= '</span>';
 
-            $ret .= '<br />';
-
             $renderer->doc .= $ret;
         }
 
-        if ($mode == 'metadata') {
+        if ($mode == 'metadata' && $isInternal) {
             // Add metadata so the SVG is associated to the page
-            if ($data['type'] == 'internalmedia') {
-                global $ID;
-
-                $src = $data['src'];
-                list($src) = explode('#', $src, 2);
-
-                if (media_isexternal($src))
-                    return;
-
-                resolve_mediaid(getNS($ID), $src, $exists);
-                $renderer->meta['relation']['media'][$src] = $exists;
-            }
+            $renderer->meta['relation']['media'][$src] = $exists;
         }
 
         return true;
     }
 }
-
