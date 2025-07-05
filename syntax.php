@@ -328,6 +328,10 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             }
 
             if (is_a($renderer, 'renderer_plugin_dw2pdf')) {
+                $svgembed_files = media_alternativefiles($src, ['png']);
+                if (isset($svgembed_files['image/png']))
+                    $properties = str_replace(ml($src, $ml_array), ml($svgembed_files['image/png'], $ml_array), $properties);
+
                 $ret .= "<img id=\"" . $svgembed_md5 . "\" src={$properties} />";
             }
             else {
