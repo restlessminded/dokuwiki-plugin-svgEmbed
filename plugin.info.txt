@@ -5,3 +5,4 @@ date   2025-07-04
 name   svgEmbed plugin
 desc   Allows the use of the standard media syntax, but SVG files are placed with the <object> or <embed> tag, not the <img> tag.
 url    http://www.dokuwiki.org/plugin:svgembed
+minphp 7.4
