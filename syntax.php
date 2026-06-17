@@ -29,7 +29,7 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
         //remove aligning spaces
         $link[0] = trim($link[0]);
 
-        //split into src and parameters (using the very last questionmark)
+        //split into src and parameters (using the very last question mark)
         $pos = strrpos($link[0], '?');
 
         if ($pos !== false) {
@@ -289,11 +289,11 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
             if (!$data['inResponsiveUnits'])
                 $ml_array = array_merge($ml_array, array('w' => $data['width'], 'h' => $data['height']));
 
-            $properties = '"' . ml($src, $ml_array) . '" class="media' . $data['align'] . '"';
+            $properties = '"' . ml($src, $ml_array) . '" class="media' . hsc($data['align']) . '"';
 
             if ($data['title']) {
-                $properties .= ' title="' . $data['title'] . '"';
-                $properties .= ' alt="' . $data['title'] . '"';
+                $properties .= ' title="' . hsc($data['title']) . '"';
+                $properties .= ' alt="' . hsc($data['title']) . '"';
             } else {
                 $properties .= ' alt=""';
             }
@@ -306,10 +306,10 @@ class syntax_plugin_svgembed extends DokuWiki_Syntax_Plugin
 */
 
             if (isset($data['width']))
-              $properties .= ' width="' . $data['width'] . $data['responsiveUnits'] . '"';
+              $properties .= ' width="' . hsc($data['width'] . $data['responsiveUnits']) . '"';
 
             if (isset($data['height']))
-              $properties .= ' height="' . $data['width'] . $data['responsiveUnits'] . '"';
+              $properties .= ' height="' . hsc($data['width'] . $data['responsiveUnits']) . '"';
 
 
 
